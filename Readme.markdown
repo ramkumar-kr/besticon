@@ -7,7 +7,7 @@ Source of <https://icons.better-idea.org>, a favicon service:
   * Fallback icon generation
   * Single binary download for [easy self-hosting](#self-hosting)
 
-[![Build Status](https://travis-ci.org/mat/besticon.svg?branch=master)](https://travis-ci.org/mat/besticon)
+[![Build Status](https://travis-ci.org/ramkumar-kr/besticon.svg?branch=master)](https://travis-ci.org/ramkumar-kr/besticon)
 [![Donate at PayPal](https://img.shields.io/badge/paypal-donate-orange.svg?style=flat)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6F9YBSSCM6KCW "Donate once-off to this project using Paypal")
 
 
@@ -61,31 +61,31 @@ formats   | png,ico         | Comma-separated list of accepted image formats: pn
 
 I tried hard to make this useful but please note there are some known limitations:
 
-- Poor i18n support for letter icons ([#13](https://github.com/mat/besticon/issues/13))
+- Poor i18n support for letter icons ([#13](https://github.com/ramkumar-kr/besticon/issues/13))
 
-Feel free to file other bugs - and offer your help - at <https://github.com/mat/besticon/issues>.
+Feel free to file other bugs - and offer your help - at <https://github.com/ramkumar-kr/besticon/issues>.
 
 ## Self Hosting
 
-It is recommended to use your own copy of this service if you plan to rely on it in your project. An easy way to host your own copy is to use Heroku, just go to [https://heroku.com/deploy](https://heroku.com/deploy?template=https://github.com/mat/besticon) to get started.
+It is recommended to use your own copy of this service if you plan to rely on it in your project. An easy way to host your own copy is to use Heroku, just go to [https://heroku.com/deploy](https://heroku.com/deploy?template=https://github.com/ramkumar-kr/besticon) to get started.
 
 ## Server Executable
 
 ### Download binaries
 
-Binaries for some operating systems can be downloaded from <https://github.com/mat/besticon/releases/latest>
+Binaries for some operating systems can be downloaded from <https://github.com/ramkumar-kr/besticon/releases/latest>
 
-Even more binaries are available from the excellent GoBuilder community site <https://gobuilder.me/github.com/mat/besticon/besticon/iconserver>
+Even more binaries are available from the excellent GoBuilder community site <https://gobuilder.me/github.com/ramkumar-kr/besticon/besticon/iconserver>
 
 ### Build your own
 
 If you have Go 1.7 installed on your system you can use `go get` to fetch the source code and build the server:
 
-	$ go get -u github.com/mat/besticon/...
+	$ go get -u github.com/ramkumar-kr/besticon/...
 
 If you want to build executables for a different target operating system you can add the `GOOS` and `GOARCH` environment variables:
 
-	$ GOOS=linux GOARCH=amd64 go get -u github.com/mat/besticon/...
+	$ GOOS=linux GOARCH=amd64 go get -u github.com/ramkumar-kr/besticon/...
 
 ### Running
 
@@ -98,7 +98,7 @@ To use a different port use
 	$ PORT=80 iconserver
 
 Now when you open <http://localhost:8080/icons?url=instagram.com> you should see something like
-![Screenshot of The Favicon Finder](https://github.com/mat/besticon/raw/master/the-icon-finder.png)
+![Screenshot of The Favicon Finder](https://github.com/ramkumar-kr/besticon/raw/master/the-icon-finder.png)
 
 
 ## Configuration

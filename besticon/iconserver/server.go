@@ -15,9 +15,9 @@ import (
 	"strings"
 
 	"github.com/NYTimes/gziphandler"
-	"github.com/mat/besticon/besticon"
-	"github.com/mat/besticon/besticon/iconserver/assets"
-	"github.com/mat/besticon/lettericon"
+	"github.com/ramkumar-kr/besticon/besticon"
+	"github.com/ramkumar-kr/besticon/besticon/iconserver/assets"
+	"github.com/ramkumar-kr/besticon/lettericon"
 
 	// Enable runtime profiling at /debug/pprof
 	_ "net/http/pprof"
@@ -311,7 +311,7 @@ func registerGzipHandler(path string, f http.HandlerFunc) {
 }
 
 func main() {
-	fmt.Printf("iconserver %s (%s) (%s) - https://github.com/mat/besticon\n", besticon.VersionString, besticon.BuildDate, runtime.Version())
+	fmt.Printf("iconserver %s (%s) (%s) - https://github.com/ramkumar-kr/besticon\n", besticon.VersionString, besticon.BuildDate, runtime.Version())
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

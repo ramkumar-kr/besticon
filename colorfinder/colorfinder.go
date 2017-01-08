@@ -17,9 +17,10 @@ import (
 	"image/color"
 
 	// Load supported image formats
-	_ "github.com/mat/besticon/ico"
 	_ "image/gif"
 	_ "image/png"
+
+	_ "github.com/ramkumar-kr/besticon/ico"
 )
 
 func main() {

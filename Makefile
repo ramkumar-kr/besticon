@@ -1,25 +1,25 @@
 build:
-	go get github.com/mat/besticon/...
+	go get github.com/ramkumar-kr/besticon/...
 
 test_all: build test test_bench
-	go test -v github.com/mat/besticon/besticon/iconserver
+	go test -v github.com/ramkumar-kr/besticon/besticon/iconserver
 
 test:
-	go test -v github.com/mat/besticon/ico
-	go test -v github.com/mat/besticon/besticon
-	go test -v github.com/mat/besticon/lettericon
-	go test -v github.com/mat/besticon/colorfinder
+	go test -v github.com/ramkumar-kr/besticon/ico
+	go test -v github.com/ramkumar-kr/besticon/besticon
+	go test -v github.com/ramkumar-kr/besticon/lettericon
+	go test -v github.com/ramkumar-kr/besticon/colorfinder
 
 test_race:
-	go test -v -race github.com/mat/besticon/ico
-	go test -v -race github.com/mat/besticon/besticon
-	go test -v -race github.com/mat/besticon/besticon/iconserver
-	go test -v -race github.com/mat/besticon/lettericon
-	go test -v -race github.com/mat/besticon/colorfinder
+	go test -v -race github.com/ramkumar-kr/besticon/ico
+	go test -v -race github.com/ramkumar-kr/besticon/besticon
+	go test -v -race github.com/ramkumar-kr/besticon/besticon/iconserver
+	go test -v -race github.com/ramkumar-kr/besticon/lettericon
+	go test -v -race github.com/ramkumar-kr/besticon/colorfinder
 
 test_bench:
-	go test github.com/mat/besticon/lettericon -bench .
-	go test github.com/mat/besticon/colorfinder -bench .
+	go test github.com/ramkumar-kr/besticon/lettericon -bench .
+	go test github.com/ramkumar-kr/besticon/colorfinder -bench .
 
 update_godeps:
 	godep save ./...
@@ -35,7 +35,7 @@ install:
 	go get ./...
 
 run_server:
-	go build -o bin/iconserver github.com/mat/besticon/besticon/iconserver
+	go build -o bin/iconserver github.com/ramkumar-kr/besticon/besticon/iconserver
 	PORT=3000 DEPLOYED_AT=`date +%s` ./bin/iconserver
 
 install_devtools:
@@ -49,13 +49,13 @@ style:
 	find . -name "*.go" | grep -v Godeps/ | xargs golint
 
 coverage_besticon:
-	go test -coverprofile=coverage.out -covermode=count github.com/mat/besticon/besticon && go tool cover -html=coverage.out && unlink coverage.out
+	go test -coverprofile=coverage.out -covermode=count github.com/ramkumar-kr/besticon/besticon && go tool cover -html=coverage.out && unlink coverage.out
 
 coverage_ico:
-	go test -coverprofile=coverage.out -covermode=count github.com/mat/besticon/ico && go tool cover -html=coverage.out && unlink coverage.out
+	go test -coverprofile=coverage.out -covermode=count github.com/ramkumar-kr/besticon/ico && go tool cover -html=coverage.out && unlink coverage.out
 
 coverage_iconserver:
-	go test -coverprofile=coverage.out -covermode=count github.com/mat/besticon/besticon/iconserver && go tool cover -html=coverage.out && unlink coverage.out
+	go test -coverprofile=coverage.out -covermode=count github.com/ramkumar-kr/besticon/besticon/iconserver && go tool cover -html=coverage.out && unlink coverage.out
 
 vendor_dependencies:
 	godep save -r ./...
@@ -84,13 +84,13 @@ clean:
 	rm -f iconserver*.zip
 
 build_darwin_amd64:
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_amd64/iconserver -ldflags "-X github.com/mat/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/mat/besticon/besticon/iconserver
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_amd64/iconserver -ldflags "-X github.com/ramkumar-kr/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/ramkumar-kr/besticon/besticon/iconserver
 
 build_linux_amd64:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_amd64/iconserver -ldflags "-X github.com/mat/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/mat/besticon/besticon/iconserver
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_amd64/iconserver -ldflags "-X github.com/ramkumar-kr/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/ramkumar-kr/besticon/besticon/iconserver
 
 build_windows_amd64:
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/windows_amd64/iconserver.exe -ldflags "-X github.com/mat/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/mat/besticon/besticon/iconserver
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/windows_amd64/iconserver.exe -ldflags "-X github.com/ramkumar-kr/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/ramkumar-kr/besticon/besticon/iconserver
 
 build_all_platforms: build_darwin_amd64 build_linux_amd64 build_windows_amd64
 	find bin/ -type file | xargs file

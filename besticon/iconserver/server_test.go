@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mat/besticon/besticon"
+	"github.com/ramkumar-kr/besticon/besticon"
 )
 
 func TestGetIndex(t *testing.T) {

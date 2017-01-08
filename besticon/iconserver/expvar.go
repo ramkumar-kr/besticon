@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mat/besticon/besticon"
+	"github.com/ramkumar-kr/besticon/besticon"
 )
 
 type expvarHandler struct {

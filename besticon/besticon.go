@@ -22,11 +22,12 @@ import (
 	"image/color"
 
 	// Load supported image formats.
-	_ "github.com/mat/besticon/ico"
 	_ "image/gif"
 	_ "image/png"
 
-	"github.com/mat/besticon/colorfinder"
+	_ "github.com/ramkumar-kr/besticon/ico"
+
+	"github.com/ramkumar-kr/besticon/colorfinder"
 
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html/charset"

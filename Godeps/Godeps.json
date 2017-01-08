@@ -1,9 +1,9 @@
 {
-	"ImportPath": "github.com/mat/besticon",
+	"ImportPath": "github.com/ramkumar-kr/besticon",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v75",
 	"Packages": [
-		"github.com/mat/besticon/..."
+		"github.com/ramkumar-kr/besticon/..."
 	],
 	"Deps": [
 		{

@@ -11,7 +11,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/mat/besticon/vcr"
+	"github.com/ramkumar-kr/besticon/vcr"
 )
 
 func TestKicktipp(t *testing.T) {
