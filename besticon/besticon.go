@@ -22,20 +22,22 @@ import (
 	"image/color"
 
 	// Load supported image formats.
+	_ "github.com/mat/besticon/ico"
 	_ "image/gif"
 	_ "image/png"
 
 	"github.com/mat/besticon/colorfinder"
 
-	// ...even more image formats.
-	_ "github.com/mat/besticon/ico"
-
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html/charset"
+	"golang.org/x/net/idna"
 	"golang.org/x/net/publicsuffix"
 )
 
 var defaultFormats []string
+
+const MinIconSize = 0
+const MaxIconSize = 500
 
 // Icon holds icon information.
 type Icon struct {
@@ -50,31 +52,70 @@ type Icon struct {
 }
 
 type IconFinder struct {
-	FormatsAllowed []string
-	KeepImageBytes bool
-	icons          []Icon
+	FormatsAllowed  []string
+	HostOnlyDomains []string
+	KeepImageBytes  bool
+	icons           []Icon
 }
 
-func (f *IconFinder) FetchIcons(url string) (error, []Icon) {
+func (f *IconFinder) FetchIcons(url string) ([]Icon, error) {
+	url = strings.TrimSpace(url)
+	if !strings.HasPrefix(url, "http:") && !strings.HasPrefix(url, "https:") {
+		url = "http://" + url
+	}
+
+	url = f.stripIfNecessary(url)
+
 	var err error
 
 	if CacheEnabled() {
 		f.icons, err = resultFromCache(url)
 	} else {
-		f.icons, err = FetchIcons(url)
+		f.icons, err = fetchIcons(url)
 	}
 
-	return err, f.Icons()
+	return f.Icons(), err
 }
 
-func (f *IconFinder) IconWithMinSize(minSize int) *Icon {
-	SortIcons(f.icons, false)
+// stripIfNecessary removes everything from URL but the Scheme and Host
+// part if URL.Host is found in HostOnlyDomains.
+// This can be used for very popular domains like youtube.com where throttling is
+// an issue.
+func (f *IconFinder) stripIfNecessary(URL string) string {
+	u, e := url.Parse(URL)
+	if e != nil {
+		return URL
+	}
 
-	for _, ico := range f.icons {
-		if ico.Width >= minSize && ico.Height >= minSize {
+	for _, h := range f.HostOnlyDomains {
+		if u.Host == h {
+			domainOnlyURL := url.URL{Scheme: u.Scheme, Host: u.Host}
+			return domainOnlyURL.String()
+		}
+	}
+
+	return URL
+}
+
+func (f *IconFinder) IconInSizeRange(r SizeRange) *Icon {
+	icons := f.Icons()
+
+	// Try to return smallest in range perfect..max
+	sortIcons(icons, false)
+	for _, ico := range icons {
+		if (ico.Width >= r.Perfect && ico.Height >= r.Perfect) && (ico.Width <= r.Max && ico.Height <= r.Max) {
 			return &ico
 		}
 	}
+
+	// Try to return biggest in range perfect..min
+	sortIcons(icons, true)
+	for _, ico := range icons {
+		if ico.Width >= r.Min && ico.Height >= r.Min {
+			return &ico
+		}
+	}
+
 	return nil
 }
 
@@ -123,52 +164,7 @@ func includesString(arr []string, str string) bool {
 	return false
 }
 
-// FetchBestIcon takes a siteURL and returns the icon with
-// the largest dimensions for this site or an error.
-func FetchBestIcon(siteURL string) (*Icon, error) {
-	icons, e := FetchIcons(siteURL)
-	if e != nil {
-		return nil, e
-	}
-
-	if len(icons) < 1 {
-		return nil, errors.New("besticon: no icons found for site")
-	}
-
-	best := icons[0]
-	return &best, nil
-}
-
-func FetchOrGenerateIcon(siteURL string, size int) (*Icon, error) {
-	icons, err := FetchIcons(siteURL)
-	if err != nil {
-		return nil, err
-	}
-	if len(icons) < 1 {
-		return nil, errors.New("besticon: no icons found for site")
-	}
-
-	best := icons[0]
-	if best.Width >= size && best.Height > size {
-		return &best, nil
-	}
-
-	return &Icon{
-		Width:  size,
-		Height: size,
-		Format: "png",
-		URL:    fmt.Sprintf("/siteicon?url=%s&amp;size=%d", siteURL, size),
-	}, nil
-}
-
-// FetchIcons takes a siteURL and returns all icons for this site
-// or an error.
-func FetchIcons(siteURL string) ([]Icon, error) {
-	siteURL = strings.TrimSpace(siteURL)
-	if !strings.HasPrefix(siteURL, "http") {
-		siteURL = "http://" + siteURL
-	}
-
+func fetchIcons(siteURL string) ([]Icon, error) {
 	html, url, e := fetchHTML(siteURL)
 	if e != nil {
 		return nil, e
@@ -181,7 +177,7 @@ func FetchIcons(siteURL string) ([]Icon, error) {
 
 	icons := fetchAllIcons(links)
 	icons = rejectBrokenIcons(icons)
-	SortIcons(icons, true)
+	sortIcons(icons, true)
 
 	return icons, nil
 }
@@ -316,12 +312,23 @@ func MainColorForIcons(icons []Icon) *color.RGBA {
 	}
 
 	var icon *Icon
+	// Prefer .png and .gif
 	for _, ico := range icons {
 		if ico.Format == "png" || ico.Format == "gif" {
 			icon = &ico
 			break
 		}
 	}
+	// Try .ico else
+	if icon == nil {
+		for _, ico := range icons {
+			if ico.Format == "ico" {
+				icon = &ico
+				break
+			}
+		}
+	}
+
 	if icon == nil {
 		return nil
 	}
@@ -388,8 +395,19 @@ func fetchIconDetails(url string) Icon {
 	return i
 }
 
-func get(url string) (*http.Response, error) {
-	req, e := http.NewRequest("GET", url, nil)
+func get(urlstring string) (*http.Response, error) {
+	u, e := url.Parse(urlstring)
+	if e != nil {
+		return nil, e
+	}
+	// Maybe we can get rid of this conversion someday
+	// https://github.com/golang/go/issues/13835
+	u.Host, e = idna.ToASCII(u.Host)
+	if e != nil {
+		return nil, e
+	}
+
+	req, e := http.NewRequest("GET", u.String(), nil)
 	if e != nil {
 		return nil, e
 	}
@@ -506,7 +524,7 @@ var client *http.Client
 var keepImageBytes bool
 
 func init() {
-	setHTTPClient(&http.Client{Timeout: 60 * time.Second})
+	setHTTPClient(&http.Client{Timeout: 20 * time.Second})
 
 	// Needs to be kept in sync with those image/... imports
 	defaultFormats = []string{"png", "gif", "ico"}
@@ -529,3 +547,5 @@ func init() {
 	SetLogOutput(os.Stdout)
 	keepImageBytes = true
 }
+
+var BuildDate string // set via ldflags on Make

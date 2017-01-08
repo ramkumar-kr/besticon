@@ -18,6 +18,7 @@ func TestColorFromHex(t *testing.T) {
 func TestRender(t *testing.T) {
 	assertCorrectImageData(t, "A", 16, "123456")
 	assertCorrectImageData(t, "X", 32, "dfdfdf")
+	assertCorrectImageData(t, "ф", 32, "dfdfdf")
 }
 
 func TestPickForegroundColor(t *testing.T) {
@@ -45,8 +46,6 @@ func TestRelativeLuminance(t *testing.T) {
 	assertFloatEquals(t, 0.07, relativeLuminance(blue))
 }
 
-const testdataDir = "testdata/"
-
 func assertCorrectImageData(t *testing.T, letter string, width int, hexColor string) {
 	imageData, err := renderBytes(letter, mustColorFromHex(hexColor), width)
 	if err != nil {
@@ -55,6 +54,7 @@ func assertCorrectImageData(t *testing.T, letter string, width int, hexColor str
 	}
 
 	// "A-144-123456.png"
+	testdataDir := fmt.Sprintf("testdata/")
 	file := fmt.Sprintf(testdataDir+"%s-%d-%s.png", letter, width, hexColor)
 	fileData, err := bytesFromFile(file)
 	if err != nil {
@@ -117,6 +117,9 @@ func TestMainLetterFromURL(t *testing.T) {
 	assertEquals(t, "b", MainLetterFromURL("blogspot.com"))
 
 	assertEquals(t, "h", MainLetterFromURL("httpbin.org"))
+
+	assertEquals(t, `м`, MainLetterFromURL(`http://минобрнауки.рф/`))
+	assertEquals(t, `ф`, MainLetterFromURL(`http://фби.рф/`))
 }
 
 func TestIconPath(t *testing.T) {
@@ -142,9 +145,23 @@ func TestParseIconPath(t *testing.T) {
 	assertEquals(t, "C", char)
 	assertEquals(t, 120, size)
 
+	char, _, size = ParseIconPath("lettericons/%D1%84-120.png") //ф-120.png
+	assertEquals(t, `ф`, char)
+	assertEquals(t, 120, size)
+
 	char, col, size = ParseIconPath("lettericons/D-150-ababab.png")
 	assertEquals(t, "D", char)
 	assertEquals(t, 150, size)
+	assertEquals(t, &color.RGBA{171, 171, 171, 0xff}, col)
+
+	char, col, size = ParseIconPath("lettericons/D-256-ababab.png")
+	assertEquals(t, "D", char)
+	assertEquals(t, 256, size)
+	assertEquals(t, &color.RGBA{171, 171, 171, 0xff}, col)
+
+	char, col, size = ParseIconPath("lettericons/D-1024-ababab.png")
+	assertEquals(t, "D", char)
+	assertEquals(t, 256, size)
 	assertEquals(t, &color.RGBA{171, 171, 171, 0xff}, col)
 }
 

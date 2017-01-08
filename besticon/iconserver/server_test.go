@@ -37,6 +37,7 @@ func TestGetIcons(t *testing.T) {
 	iconsHandler(w, req)
 
 	assertStringEquals(t, "200", fmt.Sprintf("%d", w.Code))
+	assertStringEquals(t, "max-age=86400", w.Header().Get("Cache-Control"))
 	assertStringEquals(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
 
 	assertStringContains(t, w.Body.String(), "Icons on apple.com")
@@ -56,6 +57,7 @@ func TestGetIcon(t *testing.T) {
 	iconHandler(w, req)
 
 	assertStringEquals(t, "302", fmt.Sprintf("%d", w.Code))
+	assertStringEquals(t, "max-age=86400", w.Header().Get("Cache-Control"))
 	assertStringEquals(t, "http://www.apple.com/apple-touch-icon.png", w.Header().Get("Location"))
 }
 
@@ -69,11 +71,38 @@ func TestGetIconWithFallBackURL(t *testing.T) {
 	iconHandler(w, req)
 
 	assertStringEquals(t, "302", fmt.Sprintf("%d", w.Code))
+	assertStringEquals(t, "max-age=86400", w.Header().Get("Cache-Control"))
 	assertStringEquals(t, "http://example.com", w.Header().Get("Location"))
 }
 
 func TestGetIconWith404Page(t *testing.T) {
 	req, err := http.NewRequest("GET", "/icons?size=32&url=httpbin.org/status/404", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	iconHandler(w, req)
+
+	assertStringEquals(t, "302", fmt.Sprintf("%d", w.Code))
+	assertStringEquals(t, "/lettericons/H-32.png", w.Header().Get("Location"))
+}
+
+func TestGet404IconWithFallbackColor(t *testing.T) {
+	req, err := http.NewRequest("GET", "/icons?size=32&url=httpbin.org/status/404&fallback_icon_color=123456", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	iconHandler(w, req)
+
+	assertStringEquals(t, "302", fmt.Sprintf("%d", w.Code))
+	assertStringEquals(t, "/lettericons/H-32-123456.png", w.Header().Get("Location"))
+}
+
+func TestGet404IconWithInvalidFallbackColor(t *testing.T) {
+	req, err := http.NewRequest("GET", "/icons?size=32&url=httpbin.org/status/404&fallback_icon_color=zz", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -96,6 +125,7 @@ func TestGetAllIcons(t *testing.T) {
 
 	assertStringEquals(t, "200", fmt.Sprintf("%d", w.Code))
 	assertStringEquals(t, "application/json", w.Header().Get("Content-Type"))
+	assertStringEquals(t, "max-age=3600", w.Header().Get("Cache-Control"))
 
 	assertStringContains(t, w.Body.String(), `"url":"http://www.apple.com/favicon.ico"`)
 	assertStringContains(t, w.Body.String(), `"width":32`)
@@ -105,21 +135,35 @@ func TestGetAllIcons(t *testing.T) {
 	assertDoesNotExceed(t, len(w.Body.String()), 2000)
 }
 
-func TestGetApiIconsWithMaxAge(t *testing.T) {
-	req, err := http.NewRequest("GET", "/allicons.json?url=apple.com&max_age=2h", nil)
+func TestGetPopular(t *testing.T) {
+	req, err := http.NewRequest("GET", "/popular", nil)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	w := httptest.NewRecorder()
-	alliconsHandler(w, req)
+	popularHandler(w, req)
 
 	assertStringEquals(t, "200", fmt.Sprintf("%d", w.Code))
-	assertStringEquals(t, "application/json", w.Header().Get("Content-Type"))
+	assertStringEquals(t, "text/html; charset=utf-8", w.Header().Get("Content-Type"))
 
-	assertStringContains(t, w.Body.String(), `"url":"http://www.apple.com/favicon.ico"`)
-	assertStringContains(t, w.Body.String(), `"width":32`)
-	assertStringContains(t, w.Body.String(), `"height":32`)
+	assertStringContains(t, w.Body.String(), `Icon Examples`)
+	assertStringContains(t, w.Body.String(), `github.com`)
+}
+
+func TestGetLetterIcon(t *testing.T) {
+	req, err := http.NewRequest("GET", "/lettericons/M-144-EFC25D.png", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	lettericonHandler(w, req)
+
+	assertStringEquals(t, "200", fmt.Sprintf("%d", w.Code))
+	assertStringEquals(t, "image/png", w.Header().Get("Content-Type"))
+	assertStringEquals(t, "max-age=31536000", w.Header().Get("Cache-Control"))
+	assertIntegerInInterval(t, 1500, 1800, w.Body.Len())
 }
 
 func TestGetObsoleteApiRedirect(t *testing.T) {
@@ -159,6 +203,18 @@ func assertStringContains(t *testing.T, haystack string, needle string) {
 func assertStringEquals(t *testing.T, expected string, actual string) {
 	if expected != actual {
 		fail(t, fmt.Sprintf("Expected '%s' to be '%s'", actual, expected))
+	}
+}
+
+func assertIntegerEquals(t *testing.T, expected int, actual int) {
+	if expected != actual {
+		fail(t, fmt.Sprintf("Expected %d to be %d", actual, expected))
+	}
+}
+
+func assertIntegerInInterval(t *testing.T, lower int, upper int, actual int) {
+	if actual < lower || actual > upper {
+		fail(t, fmt.Sprintf("Expected %d to be in interval [%d,%d]", actual, lower, upper))
 	}
 }
 

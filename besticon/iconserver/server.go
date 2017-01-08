@@ -13,12 +13,14 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/NYTimes/gziphandler"
 	"github.com/mat/besticon/besticon"
 	"github.com/mat/besticon/besticon/iconserver/assets"
 	"github.com/mat/besticon/lettericon"
+
+	// Enable runtime profiling at /debug/pprof
+	_ "net/http/pprof"
 )
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,14 +38,14 @@ func iconsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	finder := besticon.IconFinder{}
+	finder := newIconFinder()
 
 	formats := r.FormValue("formats")
 	if formats != "" {
 		finder.FormatsAllowed = strings.Split(r.FormValue("formats"), ",")
 	}
 
-	e, icons := finder.FetchIcons(url)
+	icons, e := finder.FetchIcons(url)
 	switch {
 	case e != nil:
 		renderHTMLTemplate(w, 404, iconsHTML, pageInfo{URL: url, Error: e})
@@ -51,6 +53,7 @@ func iconsHandler(w http.ResponseWriter, r *http.Request) {
 		errNoIcons := errors.New("this poor site has no icons at all :-(")
 		renderHTMLTemplate(w, 404, iconsHTML, pageInfo{URL: url, Error: errNoIcons})
 	default:
+		addCacheControl(w, oneDay)
 		renderHTMLTemplate(w, 200, iconsHTML, pageInfo{Icons: icons, URL: url})
 	}
 }
@@ -58,22 +61,17 @@ func iconsHandler(w http.ResponseWriter, r *http.Request) {
 func iconHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue("url")
 	if len(url) == 0 {
-		writeAPIError(w, 400, errors.New("need url parameter"), true)
+		writeAPIError(w, 400, errors.New("need url parameter"))
 		return
 	}
 
-	size := r.FormValue("size")
-	if size == "" {
-		writeAPIError(w, 400, errors.New("need size parameter"), true)
-		return
-	}
-	minSize, err := strconv.Atoi(size)
-	if err != nil || minSize < 0 || minSize > 500 {
-		writeAPIError(w, 400, errors.New("bad size parameter"), true)
+	sizeRange, err := besticon.ParseSizeRange(r.FormValue("size"))
+	if err != nil {
+		writeAPIError(w, 400, errors.New("bad size parameter"))
 		return
 	}
 
-	finder := besticon.IconFinder{}
+	finder := newIconFinder()
 	formats := r.FormValue("formats")
 	if formats != "" {
 		finder.FormatsAllowed = strings.Split(r.FormValue("formats"), ",")
@@ -81,27 +79,36 @@ func iconHandler(w http.ResponseWriter, r *http.Request) {
 
 	finder.FetchIcons(url)
 
-	icon := finder.IconWithMinSize(minSize)
+	icon := finder.IconInSizeRange(*sizeRange)
 	if icon != nil {
-		http.Redirect(w, r, icon.URL, 302)
+		redirectWithCacheControl(w, r, icon.URL)
 		return
 	}
 
 	fallbackIconURL := r.FormValue("fallback_icon_url")
 	if fallbackIconURL != "" {
-		http.Redirect(w, r, fallbackIconURL, 302)
+		redirectWithCacheControl(w, r, fallbackIconURL)
 		return
 	}
 
 	iconColor := finder.MainColorForIcons()
 	letter := lettericon.MainLetterFromURL(url)
-	redirectPath := lettericon.IconPath(letter, size, iconColor)
-	http.Redirect(w, r, redirectPath, 302)
+
+	fallbackColorHex := r.FormValue("fallback_icon_color")
+	if iconColor == nil && fallbackColorHex != "" {
+		color, err := lettericon.ColorFromHex(fallbackColorHex)
+		if err == nil {
+			iconColor = color
+		}
+	}
+
+	redirectPath := lettericon.IconPath(letter, fmt.Sprintf("%d", sizeRange.Perfect), iconColor)
+	redirectWithCacheControl(w, r, redirectPath)
 }
 
 func popularHandler(w http.ResponseWriter, r *http.Request) {
 	iconSize, err := strconv.Atoi(r.FormValue("iconsize"))
-	if iconSize > 500 || iconSize < 10 || err != nil {
+	if iconSize > besticon.MaxIconSize || iconSize < besticon.MinIconSize || err != nil {
 		iconSize = 120
 	}
 
@@ -118,47 +125,42 @@ func popularHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
-	urlParam    = "url"
-	prettyParam = "pretty"
-	maxAge      = "max_age"
+	urlParam = "url"
 )
-
-const defaultMaxAge = time.Duration(604800) * time.Second // 7 days
 
 func alliconsHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.FormValue(urlParam)
 	if len(url) == 0 {
 		errMissingURL := errors.New("need url query parameter")
-		writeAPIError(w, 400, errMissingURL, true)
+		writeAPIError(w, 400, errMissingURL)
 		return
 	}
 
-	finder := besticon.IconFinder{}
+	finder := newIconFinder()
 	formats := r.FormValue("formats")
 	if formats != "" {
 		finder.FormatsAllowed = strings.Split(r.FormValue("formats"), ",")
 	}
 
-	e, icons := finder.FetchIcons(url)
+	icons, e := finder.FetchIcons(url)
 	if e != nil {
-		writeAPIError(w, 404, e, true)
+		writeAPIError(w, 404, e)
 		return
 	}
 
-	pretty, err := strconv.ParseBool(r.FormValue(prettyParam))
-	prettyPrint := (err == nil) && pretty
-
-	writeAPIIcons(w, url, icons, prettyPrint)
+	addCacheControl(w, oneHour)
+	writeAPIIcons(w, url, icons)
 }
 
 func lettericonHandler(w http.ResponseWriter, r *http.Request) {
 	charParam, col, size := lettericon.ParseIconPath(r.URL.Path)
-	if charParam != "" {
-		w.Header().Add("Content-Type", "image/png")
-		lettericon.Render(charParam, col, size, w)
-	} else {
-		writeAPIError(w, 400, errors.New("wrong format for lettericons/ path, must look like lettericons/M-144-EFC25D.png"), true)
+	if charParam == "" {
+		writeAPIError(w, 400, errors.New("wrong format for lettericons/ path, must look like lettericons/M-144-EFC25D.png"))
 	}
+
+	w.Header().Add(contentType, imagePNG)
+	addCacheControl(w, oneYear)
+	lettericon.Render(charParam, col, size, w)
 }
 
 func obsoleteAPIHandler(w http.ResponseWriter, r *http.Request) {
@@ -169,21 +171,16 @@ func obsoleteAPIHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func writeAPIError(w http.ResponseWriter, httpStatus int, e error, pretty bool) {
+func writeAPIError(w http.ResponseWriter, httpStatus int, e error) {
 	data := struct {
 		Error string `json:"error"`
 	}{
 		e.Error(),
 	}
-
-	if pretty {
-		renderJSONResponsePretty(w, httpStatus, data)
-	} else {
-		renderJSONResponse(w, httpStatus, data)
-	}
+	renderJSONResponse(w, httpStatus, data)
 }
 
-func writeAPIIcons(w http.ResponseWriter, url string, icons []besticon.Icon, pretty bool) {
+func writeAPIIcons(w http.ResponseWriter, url string, icons []besticon.Icon) {
 	// Don't return whole image data
 	newIcons := []besticon.Icon{}
 	for _, ico := range icons {
@@ -199,18 +196,13 @@ func writeAPIIcons(w http.ResponseWriter, url string, icons []besticon.Icon, pre
 		url,
 		newIcons,
 	}
-
-	if pretty {
-		renderJSONResponsePretty(w, 200, data)
-	} else {
-		renderJSONResponse(w, 200, data)
-	}
+	renderJSONResponse(w, 200, data)
 }
 
 const (
 	contentType     = "Content-Type"
 	applicationJSON = "application/json"
-	cacheControl    = "Cache-Control"
+	imagePNG        = "image/png"
 )
 
 func renderJSONResponse(w http.ResponseWriter, httpStatus int, data interface{}) {
@@ -218,13 +210,6 @@ func renderJSONResponse(w http.ResponseWriter, httpStatus int, data interface{})
 	w.WriteHeader(httpStatus)
 	enc := json.NewEncoder(w)
 	enc.Encode(data)
-}
-
-func renderJSONResponsePretty(w http.ResponseWriter, httpStatus int, data interface{}) {
-	w.Header().Add(contentType, applicationJSON)
-	w.WriteHeader(httpStatus)
-	b, _ := json.MarshalIndent(data, "", "  ")
-	w.Write(b)
 }
 
 type pageInfo struct {
@@ -278,8 +263,6 @@ func startServer(port string) {
 	serveAsset("/icon.svg", "besticon/iconserver/assets/icon.svg", oneYear)
 	serveAsset("/favicon.ico", "besticon/iconserver/assets/favicon.ico", oneYear)
 	serveAsset("/apple-touch-icon.png", "besticon/iconserver/assets/apple-touch-icon.png", oneYear)
-	serveAsset("/robots.txt", "besticon/iconserver/assets/robots.txt", nocache)
-	serveAsset("/test-lettericons", "besticon/iconserver/assets/test-lettericons.html", nocache)
 
 	addr := "0.0.0.0:" + port
 	logger.Print("Starting server on ", addr, "...")
@@ -290,9 +273,20 @@ func startServer(port string) {
 }
 
 const (
-	oneYear = 365 * 24 * 3600
-	nocache = -1
+	cacheControl = "Cache-Control"
+	oneYear      = 365 * oneDay
+	oneDay       = 24 * oneHour
+	oneHour      = 3600
 )
+
+func redirectWithCacheControl(w http.ResponseWriter, r *http.Request, redirectURL string) {
+	addCacheControl(w, oneDay)
+	http.Redirect(w, r, redirectURL, 302)
+}
+
+func addCacheControl(w http.ResponseWriter, maxAge int) {
+	w.Header().Add(cacheControl, fmt.Sprintf("max-age=%d", maxAge))
+}
 
 func serveAsset(path string, assetPath string, maxAgeSeconds int) {
 	registerGzipHandler(path, func(w http.ResponseWriter, r *http.Request) {
@@ -301,9 +295,7 @@ func serveAsset(path string, assetPath string, maxAgeSeconds int) {
 			panic(err)
 		}
 
-		if maxAgeSeconds != nocache {
-			w.Header().Add(cacheControl, fmt.Sprintf("max-age=%d", maxAgeSeconds))
-		}
+		addCacheControl(w, maxAgeSeconds)
 
 		http.ServeContent(w, r, assetInfo.Name(), assetInfo.ModTime(),
 			bytes.NewReader(assets.MustAsset(assetPath)))
@@ -319,7 +311,7 @@ func registerGzipHandler(path string, f http.HandlerFunc) {
 }
 
 func main() {
-	fmt.Printf("iconserver %s (%s) - https://icons.better-idea.org\n", besticon.VersionString, runtime.Version())
+	fmt.Printf("iconserver %s (%s) (%s) - https://github.com/mat/besticon\n", besticon.VersionString, besticon.BuildDate, runtime.Version())
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -352,6 +344,17 @@ func imgWidth(i *besticon.Icon) int {
 	return i.Width / 2.0
 }
 
+func newIconFinder() *besticon.IconFinder {
+	finder := besticon.IconFinder{}
+	if len(hostOnlyDomains) > 0 {
+		finder.HostOnlyDomains = hostOnlyDomains
+	}
+
+	return &finder
+}
+
+var hostOnlyDomains []string
+
 func init() {
 	cacheSize := os.Getenv("CACHE_SIZE_MB")
 	if cacheSize == "" {
@@ -360,6 +363,8 @@ func init() {
 		n, _ := strconv.Atoi(cacheSize)
 		besticon.SetCacheMaxSize(int64(n))
 	}
+
+	hostOnlyDomains = strings.Split(os.Getenv("HOST_ONLY_DOMAINS"), ",")
 
 	if besticon.CacheEnabled() {
 		expvar.Publish("cacheBytes", expvar.Func(func() interface{} { return besticon.GetCacheStats().Bytes }))

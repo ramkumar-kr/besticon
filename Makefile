@@ -1,6 +1,5 @@
 build:
-	go get github.com/mat/besticon/besticon/iconserver
-	go get github.com/mat/besticon/besticon
+	go get github.com/mat/besticon/...
 
 test_all: build test test_bench
 	go test -v github.com/mat/besticon/besticon/iconserver
@@ -55,6 +54,9 @@ coverage_besticon:
 coverage_ico:
 	go test -coverprofile=coverage.out -covermode=count github.com/mat/besticon/ico && go tool cover -html=coverage.out && unlink coverage.out
 
+coverage_iconserver:
+	go test -coverprofile=coverage.out -covermode=count github.com/mat/besticon/besticon/iconserver && go tool cover -html=coverage.out && unlink coverage.out
+
 vendor_dependencies:
 	godep save -r ./...
 	# Need to go get in order to fill $GOPATH/pkg... to minimize compile times:
@@ -82,13 +84,13 @@ clean:
 	rm -f iconserver*.zip
 
 build_darwin_amd64:
-	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_amd64/iconserver github.com/mat/besticon/besticon/iconserver
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/darwin_amd64/iconserver -ldflags "-X github.com/mat/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/mat/besticon/besticon/iconserver
 
 build_linux_amd64:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_amd64/iconserver github.com/mat/besticon/besticon/iconserver
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/linux_amd64/iconserver -ldflags "-X github.com/mat/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/mat/besticon/besticon/iconserver
 
 build_windows_amd64:
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/windows_amd64/iconserver.exe github.com/mat/besticon/besticon/iconserver
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o bin/windows_amd64/iconserver.exe -ldflags "-X github.com/mat/besticon/besticon.BuildDate=`date +'%Y-%m-%d'`" github.com/mat/besticon/besticon/iconserver
 
 build_all_platforms: build_darwin_amd64 build_linux_amd64 build_windows_amd64
 	find bin/ -type file | xargs file
