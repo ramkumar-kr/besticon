@@ -284,6 +284,7 @@ var csspaths = strings.Join([]string{
 	"link[rel='shortcut icon']",
 	"link[rel='apple-touch-icon']",
 	"link[rel='apple-touch-icon-precomposed']",
+	"meta[itemprop='image']",
 }, ", ")
 
 var errParseHTML = errors.New("besticon: could not parse html")
