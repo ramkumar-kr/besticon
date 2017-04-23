@@ -53,7 +53,7 @@ func iconsHandler(w http.ResponseWriter, r *http.Request) {
 		errNoIcons := errors.New("this poor site has no icons at all :-(")
 		renderHTMLTemplate(w, 404, iconsHTML, pageInfo{URL: url, Error: errNoIcons})
 	default:
-		addCacheControl(w, oneDay)
+		addCacheControl(w, oneYear)
 		renderHTMLTemplate(w, 200, iconsHTML, pageInfo{Icons: icons, URL: url})
 	}
 }
@@ -148,7 +148,7 @@ func alliconsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addCacheControl(w, oneHour)
+	addCacheControl(w, oneYear)
 	writeAPIIcons(w, url, icons)
 }
 
@@ -280,7 +280,7 @@ const (
 )
 
 func redirectWithCacheControl(w http.ResponseWriter, r *http.Request, redirectURL string) {
-	addCacheControl(w, oneDay)
+	addCacheControl(w, oneYear)
 	http.Redirect(w, r, redirectURL, 302)
 }
 
