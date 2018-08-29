@@ -1,11 +1,13 @@
 # favicon-service (besticon)
 
-Source of <https://icons.better-idea.org>, a favicon service:
+This is a favicon service:
 
   * Supports `favicon.ico` and `apple-touch-icon.png`
   * Simple URL API
   * Fallback icon generation
-  * Single binary download for [easy self-hosting](#self-hosting)
+  * Docker image & single binary download for [easy hosting](#hosting)
+
+Try out the demo at <https://besticon-demo.herokuapp.com> or find out how to [deploy your own version](#hosting) right now.
 
 [![Build Status](https://travis-ci.org/ramkumar-kr/besticon.svg?branch=master)](https://travis-ci.org/ramkumar-kr/besticon)
 [![Donate at PayPal](https://img.shields.io/badge/paypal-donate-orange.svg?style=flat)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6F9YBSSCM6KCW "Donate once-off to this project using Paypal")
@@ -35,12 +37,12 @@ fallback\_icon\_color | ff0000 | If provided, letter icons will be colored with 
 
 |Input URL | Icon |
 |----------|------|
-|<https://icons.better-idea.org/icon?url=yelp.com&size=32..50..120>|![Icon for yelp.com](https://icons.better-idea.org/icon?url=yelp.com&size=32..50..120)|
-|<https://icons.better-idea.org/icon?url=yelp.com&size=64..64..120>|![Icon for yelp.com](https://icons.better-idea.org/icon?url=yelp.com&size=64..64..120)|
-|<https://icons.better-idea.org/icon?url=yelp.com>|size missing|
-|<https://icons.better-idea.org/icon?url=httpbin.org/status/404&size=32..64..120>|![Icon for non-existent page](https://icons.better-idea.org/icon?url=httpbin.org/status/404&size=32..64..120)|
-|<https://icons.better-idea.org/icon?url=httpbin.org/status/404&size=32..64..120&fallback_icon_color=ff0000>|![Icon for non-existent page](https://icons.better-idea.org/icon?url=httpbin.org/status/404&size=32..64..120&fallback_icon_color=ff0000)|
-|<https://icons.better-idea.org/icon?url=фминобрнауки.рф&size=32..64..120>|![Icon with cyrillic letter ф](https://icons.better-idea.org/icon?url=фминобрнауки.рф&size=32..64..120)|
+|<https://besticon-demo.herokuapp.com/icon?url=yelp.com&size=32..50..120>|![Icon for yelp.com](https://besticon-demo.herokuapp.com/icon?url=yelp.com&size=32..50..120)|
+|<https://besticon-demo.herokuapp.com/icon?url=yelp.com&size=64..64..120>|![Icon for yelp.com](https://besticon-demo.herokuapp.com/icon?url=yelp.com&size=64..64..120)|
+|<https://besticon-demo.herokuapp.com/icon?url=yelp.com>|size missing|
+|<https://besticon-demo.herokuapp.com/icon?url=httpbin.org/status/404&size=32..64..120>|![Icon for non-existent page](https://besticon-demo.herokuapp.com/icon?url=httpbin.org/status/404&size=32..64..120)|
+|<https://besticon-demo.herokuapp.com/icon?url=httpbin.org/status/404&size=32..64..120&fallback_icon_color=ff0000>|![Icon for non-existent page](https://besticon-demo.herokuapp.com/icon?url=httpbin.org/status/404&size=32..64..120&fallback_icon_color=ff0000)|
+|<https://besticon-demo.herokuapp.com/icon?url=фминобрнауки.рф&size=32..64..120>|![Icon with cyrillic letter ф](https://besticon-demo.herokuapp.com/icon?url=фминобрнауки.рф&size=32..64..120)|
 
 
 ### GET /allicons.json
@@ -54,8 +56,8 @@ formats   | png,ico         | Comma-separated list of accepted image formats: pn
 
 #### Examples
 
-* <https://icons.better-idea.org/allicons.json?url=github.com>
-* <https://icons.better-idea.org/allicons.json?url=github.com&formats=png>
+* <https://besticon-demo.herokuapp.com/allicons.json?url=github.com>
+* <https://besticon-demo.herokuapp.com/allicons.json?url=github.com&formats=png>
 
 ## Bugs & limitations
 
@@ -65,9 +67,16 @@ I tried hard to make this useful but please note there are some known limitation
 
 Feel free to file other bugs - and offer your help - at <https://github.com/ramkumar-kr/besticon/issues>.
 
-## Self Hosting
+## Hosting
 
-It is recommended to use your own copy of this service if you plan to rely on it in your project. An easy way to host your own copy is to use Heroku, just go to [https://heroku.com/deploy](https://heroku.com/deploy?template=https://github.com/ramkumar-kr/besticon) to get started.
+An easy way to host this service is to use Heroku, just go to <https://heroku.com/deploy> to get started.
+
+## Docker
+
+A docker image is available at <https://hub.docker.com/r/matthiasluedtke/iconserver/>, generated from the [Dockerfile](https://github.com/mat/besticon/blob/master/Dockerfile) in this repo. I try to keep it updated for every release.
+
+Note that this docker image is not used to run <https://besticon-demo.herokuapp.com> and therefore not well tested.
+
 
 ## Server Executable
 
@@ -75,11 +84,9 @@ It is recommended to use your own copy of this service if you plan to rely on it
 
 Binaries for some operating systems can be downloaded from <https://github.com/ramkumar-kr/besticon/releases/latest>
 
-Even more binaries are available from the excellent GoBuilder community site <https://gobuilder.me/github.com/ramkumar-kr/besticon/besticon/iconserver>
-
 ### Build your own
 
-If you have Go 1.7 installed on your system you can use `go get` to fetch the source code and build the server:
+If you have Go 1.9 installed on your system you can use `go get` to fetch the source code and build the server:
 
 	$ go get -u github.com/ramkumar-kr/besticon/...
 
@@ -109,7 +116,8 @@ Variable         | Description            | Default Value
 --------         | -----------            | -------------
 `PORT`           | HTTP server port       | 8080
 `CACHE_SIZE_MB`  | Size for the [groupcache](http://github.com/golang/groupcache)|32
-`HOST_ONLY_DOMAINS`           | Comma-separated list of domains where requests for http://example.com/foobar will be rewritten to http://example.com |
+`POPULAR_SITES`  | Comma-separated list of domains used on /popular page |
+`HOST_ONLY_DOMAINS`           | Comma-separated list of domains where requests for http://example.com/foobar will be rewritten to http://example.com. [`HOST_ONLY_DOMAINS`](https://github.com/mat/besticon/blob/master/HOST_ONLY_DOMAINS) used by https://besticon-demo.herokuapp.com. See [#27](https://github.com/mat/besticon/issues/27). |
 
 
 ## Libraries etc.
@@ -126,18 +134,19 @@ Package | Description | License
 <http://golang.org/x/net> | | [BSD style](https://github.com/golang/net/blob/master/LICENSE)|
 <http://golang.org/x/text> | | [BSD style](https://github.com/golang/text/blob/master/LICENSE)|
 | [Noto Sans font](https://www.google.com/get/noto/) used for the generated icons | | [SIL Open Font License 1.1](http://scripts.sil.org/OFL) |
-| [The icon](http://sixrevisions.com/freebies/icons/free-icons-1000/) used on [icons.better-idea.org](https://icons.better-idea.org) | | [License](http://sixrevisions.com/freebies/icons/free-icons-1000/) |
+| [The icon](http://sixrevisions.com/freebies/icons/free-icons-1000/) | | [License](http://sixrevisions.com/freebies/icons/free-icons-1000/) |
 
 ## Contributors
 
   * Erkie - https://github.com/erkie
   * mmkal - https://github.com/mmkal
+  * kspearrin - https://github.com/kspearrin
 
 ## License
 
 MIT License (MIT)
 
-Copyright (c) 2015-2017 Matthias Lüdtke, Hamburg - <https://github.com/mat>
+Copyright (c) 2015-2018 Matthias Lüdtke, Hamburg - <https://github.com/mat>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

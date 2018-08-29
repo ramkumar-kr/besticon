@@ -89,7 +89,7 @@ func (f *IconFinder) stripIfNecessary(URL string) string {
 	}
 
 	for _, h := range f.HostOnlyDomains {
-		if u.Host == h {
+		if h == u.Host || h == "*" {
 			domainOnlyURL := url.URL{Scheme: u.Scheme, Host: u.Host}
 			return domainOnlyURL.String()
 		}
@@ -112,7 +112,7 @@ func (f *IconFinder) IconInSizeRange(r SizeRange) *Icon {
 	// Try to return biggest in range perfect..min
 	sortIcons(icons, true)
 	for _, ico := range icons {
-		if ico.Width >= r.Min && ico.Height >= r.Min {
+		if (ico.Width >= r.Min && ico.Height >= r.Min) && (ico.Width <= r.Perfect && ico.Height <= r.Perfect) {
 			return &ico
 		}
 	}
@@ -284,6 +284,12 @@ var csspaths = strings.Join([]string{
 	"link[rel='shortcut icon']",
 	"link[rel='apple-touch-icon']",
 	"link[rel='apple-touch-icon-precomposed']",
+
+	// Capitalized variants, TODO: refactor
+	"link[rel='ICON']",
+	"link[rel='SHORTCUT ICON']",
+	"link[rel='APPLE-TOUCH-ICON']",
+	"link[rel='APPLE-TOUCH-ICON-PRECOMPOSED']",
 }, ", ")
 
 var errParseHTML = errors.New("besticon: could not parse html")
@@ -491,7 +497,7 @@ func absoluteURL(baseURL *url.URL, path string) (string, error) {
 	if url.Host == "" {
 		url.Host = baseURL.Host
 	}
-	return url.String(), nil
+	return baseURL.ResolveReference(url).String(), nil
 }
 
 func urlFromBase(baseURL *url.URL, path string) string {
