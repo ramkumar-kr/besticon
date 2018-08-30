@@ -21,6 +21,12 @@ test_bench:
 	go test github.com/ramkumar-kr/besticon/lettericon -bench .
 	go test github.com/ramkumar-kr/besticon/colorfinder -bench .
 
+update_godeps:
+	godep save ./...
+
+install_godeps:
+	grep ImportPath Godeps/Godeps.json | cut -d ":" -f 2 | tr -d '"' | tr -d "," | grep -v besticon | xargs -n 1 | xargs go get
+
 deploy:
 	git push heroku master
 	heroku config:set DEPLOYED_AT=`date +%s`
@@ -30,16 +36,17 @@ install:
 
 run_server:
 	go build -o bin/iconserver github.com/ramkumar-kr/besticon/besticon/iconserver
-	PORT=3000 DEPLOYED_AT=`date +%s` HOST_ONLY_DOMAINS=* POPULAR_SITES=bing.com,github.com,instagram.com,reddit.com ./bin/iconserver
+	PORT=3000 DEPLOYED_AT=`date +%s` ./bin/iconserver
 
 install_devtools:
 	go get golang.org/x/tools/cmd/...
 	go get github.com/golang/lint/golint
+	go get github.com/tools/godep
 	go get -u github.com/jteeuwen/go-bindata/...
 
 style:
-	find . -name "*.go" | xargs go tool vet -all
-	find . -name "*.go" | xargs golint
+	find . -name "*.go" | grep -v Godeps/ | xargs go tool vet -all
+	find . -name "*.go" | grep -v Godeps/ | xargs golint
 
 coverage_besticon:
 	go test -coverprofile=coverage.out -covermode=count github.com/ramkumar-kr/besticon/besticon && go tool cover -html=coverage.out && unlink coverage.out
@@ -49,6 +56,11 @@ coverage_ico:
 
 coverage_iconserver:
 	go test -coverprofile=coverage.out -covermode=count github.com/ramkumar-kr/besticon/besticon/iconserver && go tool cover -html=coverage.out && unlink coverage.out
+
+vendor_dependencies:
+	godep save -r ./...
+	# Need to go get in order to fill $GOPATH/pkg... to minimize compile times:
+	go get ./...
 
 test_websites:
 	go get ./...
@@ -91,16 +103,15 @@ github_package: clean build_all_platforms
 	ls -alht iconserver*.zip
 
 build_docker_image: build_linux_amd64
-	docker build -t matthiasluedtke/iconserver:latest -t matthiasluedtke/iconserver:`cat VERSION` .
-
-push_docker_image:
-	docker push matthiasluedtke/iconserver:latest
-	docker push matthiasluedtke/iconserver:`cat VERSION`
+	docker build -t matthiasluedtke/iconserver .
 
 new_release: bump_version rewrite-version.go git_tag_version
 
 bump_version:
-	vi VERSION
+	cat VERSION
+	head -n1 VERSION | awk -F. '{$$NF = $$NF + 1;} 1' | sed 's/ /./g' > NEW_VERSION
+	mv NEW_VERSION VERSION
+	cat VERSION
 
 rewrite-version.go:
 	echo "package besticon\n\n// Version string, same as VERSION, generated my Make\nconst VersionString = \"`cat VERSION`\"" > besticon/version.go

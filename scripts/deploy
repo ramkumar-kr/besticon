@@ -1,5 +1,7 @@
 #!/bin/bash
-set -euxo pipefail
+
+set -e # Stop on first error
+set -x # Print commands
 
 make clean
 make build_linux_amd64

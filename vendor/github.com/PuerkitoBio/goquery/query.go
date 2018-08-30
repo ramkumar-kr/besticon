@@ -1,11 +1,18 @@
 package goquery
 
-import "golang.org/x/net/html"
+import (
+	"github.com/andybalholm/cascadia"
+	"golang.org/x/net/html"
+)
 
 // Is checks the current matched set of elements against a selector and
 // returns true if at least one of these elements matches.
 func (s *Selection) Is(selector string) bool {
-	return s.IsMatcher(compileMatcher(selector))
+	if len(s.Nodes) > 0 {
+		return s.IsMatcher(cascadia.MustCompile(selector))
+	}
+
+	return false
 }
 
 // IsMatcher checks the current matched set of elements against a matcher and

@@ -15,7 +15,7 @@
 //
 // To measure a TrueType font in ideal FUnit space, use scale equal to
 // font.FUnitsPerEm().
-package truetype // import "github.com/golang/freetype/truetype"
+package truetype
 
 import (
 	"fmt"
@@ -57,8 +57,7 @@ const (
 	// A 32-bit encoding consists of a most-significant 16-bit Platform ID and a
 	// least-significant 16-bit Platform Specific ID. The magic numbers are
 	// specified at https://www.microsoft.com/typography/otspec/name.htm
-	unicodeEncodingBMPOnly  = 0x00000003 // PID = 0 (Unicode), PSID = 3 (Unicode 2.0 BMP Only)
-	unicodeEncodingFull     = 0x00000004 // PID = 0 (Unicode), PSID = 4 (Unicode 2.0 Full Repertoire)
+	unicodeEncoding         = 0x00000003 // PID = 0 (Unicode), PSID = 3 (Unicode 2.0)
 	microsoftSymbolEncoding = 0x00030000 // PID = 3 (Microsoft), PSID = 0 (Symbol)
 	microsoftUCS2Encoding   = 0x00030001 // PID = 3 (Microsoft), PSID = 1 (UCS-2)
 	microsoftUCS4Encoding   = 0x0003000a // PID = 3 (Microsoft), PSID = 10 (UCS-4)
@@ -143,7 +142,7 @@ func parseSubtables(table []byte, name string, offset, size int, pred func([]byt
 		pidPsid := u32(table, offset)
 		// We prefer the Unicode cmap encoding. Failing to find that, we fall
 		// back onto the Microsoft cmap encoding.
-		if pidPsid == unicodeEncodingBMPOnly || pidPsid == unicodeEncodingFull {
+		if pidPsid == unicodeEncoding {
 			bestOffset, bestPID, ok = offset, pidPsid>>16, true
 			break
 
@@ -185,9 +184,7 @@ type Font struct {
 	locaOffsetFormat        int
 	nGlyph, nHMetric, nKern int
 	fUnitsPerEm             int32
-	ascent                  int32               // In FUnits.
-	descent                 int32               // In FUnits; typically negative.
-	bounds                  fixed.Rectangle26_6 // In FUnits.
+	bounds                  fixed.Rectangle26_6
 	// Values from the maxp section.
 	maxTwilightPoints, maxStorage, maxFunctionDefs, maxStackElements uint16
 }
@@ -292,8 +289,6 @@ func (f *Font) parseHhea() error {
 	if len(f.hhea) != 36 {
 		return FormatError(fmt.Sprintf("bad hhea length: %d", len(f.hhea)))
 	}
-	f.ascent = int32(int16(u16(f.hhea, 4)))
-	f.descent = int32(int16(u16(f.hhea, 6)))
 	f.nHMetric = int(u16(f.hhea, 34))
 	if 4*f.nHMetric+2*(f.nGlyph-f.nHMetric) != len(f.hmtx) {
 		return FormatError(fmt.Sprintf("bad hmtx length: %d", len(f.hmtx)))
@@ -324,20 +319,11 @@ func (f *Font) parseKern() error {
 	if version != 0 {
 		return UnsupportedError(fmt.Sprintf("kern version: %d", version))
 	}
-
 	n, offset := u16(f.kern, offset), offset+2
-	if n == 0 {
-		return UnsupportedError("kern nTables: 0")
+	if n != 1 {
+		return UnsupportedError(fmt.Sprintf("kern nTables: %d", n))
 	}
-	// TODO: support multiple subtables. In practice, almost all .ttf files
-	// have only one subtable, if they have a kern table at all. But it's not
-	// impossible. Xolonium Regular (https://fontlibrary.org/en/font/xolonium)
-	// has 3 subtables. Those subtables appear to be disjoint, rather than
-	// being the same kerning pairs encoded in three different ways.
-	//
-	// For now, we'll use only the first subtable.
-
-	offset += 2 // Skip the version.
+	offset += 2
 	length, offset := int(u16(f.kern, offset)), offset+2
 	coverage, offset := u16(f.kern, offset), offset+2
 	if coverage != 0x0001 {
@@ -560,7 +546,8 @@ func parse(ttf []byte, offset int) (font *Font, err error) {
 			return
 		}
 		ttcVersion, offset := u32(ttf, offset), offset+4
-		if ttcVersion != 0x00010000 && ttcVersion != 0x00020000 {
+		if ttcVersion != 0x00010000 {
+			// TODO: support TTC version 2.0, once I have such a .ttc file to test with.
 			err = FormatError("bad TTC version")
 			return
 		}
@@ -587,15 +574,14 @@ func parse(ttf []byte, offset int) (font *Font, err error) {
 		return
 	}
 	n, offset := int(u16(ttf, offset)), offset+2
-	offset += 6 // Skip the searchRange, entrySelector and rangeShift.
-	if len(ttf) < 16*n+offset {
+	if len(ttf) < 16*n+12 {
 		err = FormatError("TTF data is too short")
 		return
 	}
 	f := new(Font)
 	// Assign the table slices.
 	for i := 0; i < n; i++ {
-		x := 16*i + offset
+		x := 16*i + 12
 		switch string(ttf[x : x+4]) {
 		case "cmap":
 			f.cmap, err = readTable(ttf, ttf[x+8:x+16])

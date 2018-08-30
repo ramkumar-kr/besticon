@@ -1,16 +1,19 @@
 package goquery
 
-import "golang.org/x/net/html"
+import (
+	"github.com/andybalholm/cascadia"
+	"golang.org/x/net/html"
+)
 
 // Filter reduces the set of matched elements to those that match the selector string.
 // It returns a new Selection object for this subset of matching elements.
 func (s *Selection) Filter(selector string) *Selection {
-	return s.FilterMatcher(compileMatcher(selector))
+	return s.FilterMatcher(cascadia.MustCompile(selector))
 }
 
 // FilterMatcher reduces the set of matched elements to those that match
-// the given matcher. It returns a new Selection object for this subset
-// of matching elements.
+// the given matcher.
+// It returns a new Selection object for this subset of matching elements.
 func (s *Selection) FilterMatcher(m Matcher) *Selection {
 	return pushStack(s, winnow(s, m, true))
 }
@@ -18,7 +21,7 @@ func (s *Selection) FilterMatcher(m Matcher) *Selection {
 // Not removes elements from the Selection that match the selector string.
 // It returns a new Selection object with the matching elements removed.
 func (s *Selection) Not(selector string) *Selection {
-	return s.NotMatcher(compileMatcher(selector))
+	return s.NotMatcher(cascadia.MustCompile(selector))
 }
 
 // NotMatcher removes elements from the Selection that match the given matcher.
@@ -139,18 +142,8 @@ func winnow(sel *Selection, m Matcher, keep bool) []*html.Node {
 // Filter based on an array of nodes, and the indicator to keep (Filter) or
 // to get rid of (Not) the matching elements.
 func winnowNodes(sel *Selection, nodes []*html.Node, keep bool) []*html.Node {
-	if len(nodes)+len(sel.Nodes) < minNodesForSet {
-		return grep(sel, func(i int, s *Selection) bool {
-			return isInSlice(nodes, s.Get(0)) == keep
-		})
-	}
-
-	set := make(map[*html.Node]bool)
-	for _, n := range nodes {
-		set[n] = true
-	}
 	return grep(sel, func(i int, s *Selection) bool {
-		return set[s.Get(0)] == keep
+		return isInSlice(nodes, s.Get(0)) == keep
 	})
 }
 

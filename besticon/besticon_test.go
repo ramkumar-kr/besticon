@@ -6,7 +6,6 @@ import (
 	"image"
 	"image/color"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"reflect"
 	"sort"
@@ -112,19 +111,6 @@ func TestEat24WithBaseTag(t *testing.T) {
 	assertEquals(t, (*Icon)(nil), actualImage)
 }
 
-func TestCar2goWithRelativeURL(t *testing.T) {
-	// ../../assets/icon.ico
-	actualImages, err, finder := fetchIconsWithVCR("car2go.vcr", "http://car2go.com")
-	assertEquals(t, nil, err)
-	expectedImages := []Icon{
-		{URL: "https://www.car2go.com/media/assets/patterns/static/img/favicon.ico", Width: 16, Height: 16, Format: "ico", Bytes: 1150, Sha1sum: "860e9ef188675f4f0b7036c2d22e6497ea732282"},
-	}
-	assertEquals(t, expectedImages, actualImages)
-
-	actualImage := finder.IconInSizeRange(SizeRange{80, 120, 200})
-	assertEquals(t, (*Icon)(nil), actualImage)
-}
-
 func TestAlibabaWithBaseTagWithoutScheme(t *testing.T) {
 	actualImages, err, _ := fetchIconsWithVCR("alibaba.vcr", "http://alibaba.com")
 	assertEquals(t, nil, err)
@@ -133,18 +119,6 @@ func TestAlibabaWithBaseTagWithoutScheme(t *testing.T) {
 		{URL: "http://www.alibaba.com/favicon.ico", Width: 16, Height: 16, Format: "ico", Bytes: 1406, Sha1sum: "4ffbef9b6044c62cd6c8b1ee0913ba93e6e80072"},
 	}
 
-	assertEquals(t, expectedImages, actualImages)
-}
-
-func TestDnevnikWithCapitalizedIconTag(t *testing.T) {
-	actualImages, err, _ := fetchIconsWithVCR("dnevnik.vcr", "http://www.dnevnik.bg")
-	assertEquals(t, nil, err)
-	expectedImages := []Icon{
-		{URL: "http://www.dnevnik.bg/images/layout/apple-touch-icon.png", Width: 180, Height: 180, Format: "png", Bytes: 1597, Sha1sum: "16af14e168879ac52f594c67b4298f76d768a5eb"},
-		{URL: "http://www.dnevnik.bg/apple-touch-icon.png", Width: 129, Height: 129, Format: "png", Bytes: 2092, Sha1sum: "f96615ddf0d9e75e28b7420ed10bbdc1de6f6dab"},
-		{URL: "http://www.dnevnik.bg/favicon.ico", Width: 32, Height: 32, Format: "ico", Bytes: 6518, Sha1sum: "72b4cb7ca529a5d3f5ebf380e77108bd2c04bc04"},
-		{URL: "http://www.dnevnik.bg/images/layout/favicon.ico", Width: 16, Height: 16, Format: "ico", Bytes: 894, Sha1sum: "acf6cacab957c263851e8c13ea68ad8ecb5fcb94"},
-	}
 	assertEquals(t, expectedImages, actualImages)
 }
 
@@ -173,16 +147,6 @@ func TestYoutubeWithDomainRewrite(t *testing.T) {
 	ico := finder.IconInSizeRange(SizeRange{0, 80, 200})
 	assertEquals(t, &Icon{URL: "https://s.ytimg.com/yts/img/favicon_96-vfldSA3ca.png", Width: 96, Height: 96, Format: "png", Bytes: 1510, Sha1sum: "7149bef987538d34e2ab6e069d08211d0a6e407d"}, ico)
 	assertEquals(t, nil, err)
-}
-
-func TestRandomOrg(t *testing.T) {
-	// https://github.com/mat/besticon/issues/28
-	_, err, finder := fetchIconsWithVCR("random.org.vcr", "https://random.org")
-	assertEquals(t, nil, err)
-
-	actualImage := finder.IconInSizeRange(SizeRange{16, 32, 64})
-	expectedImage := &Icon{URL: "https://www.random.org/favicon.ico", Width: 16, Height: 16, Format: "ico", Bytes: 2550, Error: error(nil), Sha1sum: "f8087e651b79c36d206f6f408d7fe74dcb11d351"}
-	assertEquals(t, expectedImage, actualImage)
 }
 
 func TestParsingInexistentSite(t *testing.T) {
@@ -287,14 +251,6 @@ func TestParseSize(t *testing.T) {
 
 	_, ok = parseSize("-10")
 	assertEquals(t, ok, false)
-}
-
-func TestAbsoluteURL(t *testing.T) {
-	baseURL, e := url.Parse("http://car2go.com")
-	check(e)
-	u, e := absoluteURL(baseURL, "/../../media/favicon.ico")
-	check(e)
-	assertEquals(t, "http://car2go.com/media/favicon.ico", u)
 }
 
 const testdataDir = "testdata/"
